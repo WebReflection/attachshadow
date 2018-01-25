@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <title>attachShadow: An iframe based Shadow DOM poorlyfill</title>
+    <meta charset="utf-8">
+    <script src="../index.js"></script>
+    <script>
+    this.onload = function () {
+      var shadowDOM = document.body.appendChild(document.createElement('div')).attachShadow({mode: 'open'});
+      shadowDOM.innerHTML = '<style>:host{border:1px solid black;}</style><button>X</button>';
+      // mandatory addEventListener, on onclick allowed, unless you are using hyperHTML
+      // in that case hyper(shadowDOM)`<button onclick=${console.log}>X</button>`; would just work
+      shadowDOM.querySelector('button').addEventListener('click', console.log);
+    };
+    </script>
+  </head>
+  <body onclick="console.log(event);"></body>
+</html>

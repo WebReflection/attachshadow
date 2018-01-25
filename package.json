@@ -1,0 +1,30 @@
+{
+  "name": "attachshadow",
+  "version": "0.0.0",
+  "description": "An iframe based Shadow DOM poorlyfill",
+  "main": "index.js",
+  "browser": "min.js",
+  "scripts": {
+    "build": "npm run min && npm run size",
+    "min": "echo \"/*! (c) Andrea Giammarchi (ISC) */$(uglifyjs index.js --support-ie8 --comments=/^!/ -c -m)\" > min.js",
+    "size": "echo \"size: $(cat min.js | brotli | wc -c)\" bytes"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebReflection/attachshadow.git"
+  },
+  "keywords": [
+    "shadow",
+    "dom",
+    "polyfill"
+  ],
+  "author": "Andrea Giammarchi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WebReflection/attachshadow/issues"
+  },
+  "homepage": "https://github.com/WebReflection/attachshadow#readme",
+  "devDependencies": {
+    "uglify-js": "^1.3.5"
+  }
+}
