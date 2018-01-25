@@ -25,6 +25,6 @@
   },
   "homepage": "https://github.com/WebReflection/attachshadow#readme",
   "devDependencies": {
-    "uglify-js": "^1.3.5"
+    "uglify-js": "^2.8.29"
   }
 }
