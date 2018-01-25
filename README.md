@@ -10,10 +10,10 @@ An iframe based Shadow DOM poorlyfill
 
   * compatible down to **IE9** with a size of about 1.3K
   * provides an `element.attachShadow(mode)` method out of the box
-  * both mode `open` and `closed` are available. `open` is set to the `shadowRoot` property as expected.
+  * both mode `open` and `closed` are available. `open` is set to the `shadowRoot` property as expected
   * events are synthetically re-targeted to the owner, hence propagated to the parent document
   * encapsulation is preserved, including `:host` CSS declarations
-  * each _iframe_ transparently resize accordingly to its content
+  * each _iframe_ transparently resizes accordingly to its content
 
 ### What this is not
 
@@ -27,4 +27,6 @@ You can use `https://unpkg.com/attachshadow` as CDN for this library.
 
 ### Test
 
-Please visit the [test page](https://webreflection.github.io/attachshadow/test/) and click on the button to see in console the propagated event.
+Please visit the [test page](https://webreflection.github.io/attachshadow/test/) and click on the button to see in console the propagated event in IE9 or any other browser.
+
+You can also test more modern browsers in this [good old CSS Tricks demo](https://codepen.io/WebReflection/pen/goNNwZ?editors=0010).
