@@ -27,4 +27,4 @@ You can use `https://unpkg.com/attachshadow` as CDN for this library.
 
 ### Test
 
-Please visit the [test page](webreflection.github.io/attachshadow/test/) and click on the button to see in console the propagated event.
+Please visit the [test page](https://webreflection.github.io/attachshadow/test/) and click on the button to see in console the propagated event.
