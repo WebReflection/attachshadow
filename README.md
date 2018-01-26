@@ -20,10 +20,15 @@ An iframe based Shadow DOM poorlyfill
   * the `<slot>` element <small>(under consideration)</small>
   * if you `shadowRoot.innerHTML = "<p onclick='console.log(0)'></p>"` DOM Level 0 events won't ever propagate (inconsistent with real Shadow DOM, just don't do that or simply use [hyperHTML](https://github.com/WebReflection/hyperHTML) instead that will use `addEventListener`)
 
+```js
+hyperHTML(el.shadowRoot)
+  `<p onclick=${() => console.log('🎉')}></p>`;
+```
+
 ### What this is not
 
   * this is not a Custom Elements or an HTMLTemplateElement polyfill. This is only the `attachShadow` method.
-  * this is not, and never could be, a 100% reliable polyfill for Shadow DOM, for the simple reason that Shadow DOM cannot be polyfilled (this is _a poorlyfill_ indeed, with its caveats and compromises)
+  * this is not, and never could be, a 100% fully standard Shadow DOM polyfill, for the simple reason that Shadow DOM cannot be polyfilled (this is _a poorlyfill_ indeed, with its caveats and compromises)
   * not yet a battle tested solution. If you have any experience with _iframe_ shenanigans please help making this poorlyfill less poor, thank you!
 
 ### CDN
