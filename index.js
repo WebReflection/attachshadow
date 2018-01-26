@@ -159,15 +159,46 @@
     // attach to the iframe some information used on onload
     iframe.id = uid();
     iframe.listeners = [];
-    iframe.Element = (window.Element||window.Node).prototype;
-    iframe.addEventListener = iframe.Element.addEventListener;
+    var Element = (window.Element||window.Node).prototype;
+    var addEventListener = Element.addEventListener;
+    var removeEventListener = Element.removeEventListener;
+    iframe.setup = function (html) {
+      Element.attachShadow = element.attachShadow;
+      Element.addEventListener = function (type, listener, options) {
+        var self=this;
+        addEventListener.apply(self,arguments);
+        addEventListener.call(html,type,function(e){
+          var c = iframe.ownerDocument.createEvent("Event");
+          c.initEvent(e.type, e.bubbles, e.cancelable);
+          for(var k in e) {
+            try {
+              c[k] = e[k];
+            } catch(meh) {}
+          }
+          console.log(iframe.parentNode);
+          iframe.parentNode.dispatchEvent(c);
+        });
+      };
+      Element.removeEventListener = function (type, listener, options) {
+
+      };
+      // all listeners registered while the iframe state was incomplete
+      // should now be attached with the right method to those nodes
+      for (var tmp,i = 0; i < iframe.listeners.length; i++) {
+        tmp = iframe.listeners[i];
+        Element[tmp.k + 'EventListener'].apply(tmp.t, tmp.a);
+      }
+    };
 
     // if the document is not ready, set it up onload
     if (document.readyState != "complete") {
       iframe.onload = onload;
       // also intercept every addEventListener happened before
-      iframe.Element.addEventListener = function () {
-        iframe.listeners.push({t: this, a: arguments});
+      Element.addEventListener = function () {
+        iframe.listeners.push({k: 'add', t: this, a: arguments});
+      };
+      Element.removeEventListener = function () {
+        iframe.listeners.push({k: 'remove', t: this, a: arguments});
       };
     }
     // otherwise set it up right away
@@ -183,43 +214,13 @@
       ).textContent = 'html,body{' + cssReset + '}*{margin:0}' + shadowReset;
       // JavaScript Shadow DOM fake environment bootstrap
       head.appendChild(document.createElement('script')).textContent = [
-        '(function(G,A,html){',
+        '(function(A,G){',
           // IE9 needs this because parent[iframe.id]
           // would give back the iframe window instead
           'for(var F,i=0,l=A.length;i<l;i++){',
-            'if(A[i].id==="' + iframe.id + '"){F=A[i];break;}',
-          '}',
-          'F.Element.' + attachShadow + '=',
-            '(parent.Element||parent.Node).prototype.' + attachShadow + ';',
-          'var removeEventListener=F.Element.removeEventListener;',
-          // the idea is that any event that reaches HTML
-          // is meant to be propagated up to the parent document
-          'F.Element.addEventListener=function(t){',
-            'var self=this;',
-            'F.addEventListener.apply(self,arguments);',
-            'F.addEventListener.call(html,t,function(e){',
-              'var c=F.ownerDocument.createEvent("Event");',
-              'c.initEvent(e.type,e.bubbles,e.cancelable);',
-              'for(var k in e)c[k]=e[k];',
-              'F.parentNode.dispatchEvent(c);',
-            '});',
-          '};',
-          // and dropping inner events should stop
-          // propagating them up to the parent document ... right?
-          'F.Element.removeEventListener=function(){',
-            'removeEventListener.apply(this,arguments);',
-          '};',
-          // all listeners registered while the iframe state was incomplete
-          // should now be attached with the right method to those nodes
-          'for(var l,i=0;i<F.listeners.length;i++){',
-            'l=F.listeners[i];',
-            'F.Element.addEventListener.apply(l.t,l.a);',
-          '}',
-        '}(',
-          'window,',
-          'parent.document.getElementsByTagName("iframe"),',
-          'document.documentElement',
-        '))'
+            'if(A[i].id==="' + iframe.id + '")return A[i].setup(G)}',
+        '}(parent.document.getElementsByTagName("iframe"),',
+          'document.documentElement))'
       ].join('\n');
       // the previously returned node most likely is full of content
       var firstChild;
