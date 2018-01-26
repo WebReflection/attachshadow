@@ -6,7 +6,6 @@
   var ADD_EVENT_LISTENER = 'addEventListener';
   var REMOVE_EVENT_LISTENER = 'removeEventListener';
   var DISPATCH_EVENT = 'dispatchEvent';
-  var GET_ELEMENTS_BY_TAG_NAME = 'getElementsByTagName';
 
   // used to reset both iframe and its document
   var cssReset = [
@@ -53,7 +52,7 @@
 
   // returns the head or grabs it otherwise
   function headOf(document) {
-    return document.head || document[GET_ELEMENTS_BY_TAG_NAME]('head')[0];
+    return document.head || document.getElementsByTagName('head')[0];
   }
 
   // delegate accessors such innerHTML or textContent to the iframe body
@@ -167,31 +166,33 @@
     Object.defineProperties(this, descriptors);
 
     // attach to the iframe some information used on onload
-    iframe.id = uid();
-    iframe.listeners = [];
+    var id = uid();
+    var listeners = [];
     var Element = (window.Element||window.Node).prototype;
     var addEventListener = Element[ADD_EVENT_LISTENER];
     var removeEventListener = Element[REMOVE_EVENT_LISTENER];
-    iframe.setup = function () {
+    function iframeSetup() {
       var html = document.documentElement;
       Element.attachShadow = element.attachShadow;
       Element[ADD_EVENT_LISTENER] = function (type, listener, options) {
-        var listeners = this[iframe.id] || (this[iframe.id] = {s: [], d: []});
+        var self = this;
+        var listeners = self[id] || (self[id] = {s: [], d: []});
         var i = listeners.s.indexOf(listener);
         if (i < 0) {
           i = listeners.s.push(listener) - 1;
           listeners.d[i] = function (event) {
+            if (!self.contains(event.target)) return;
             var e = iframe.ownerDocument.createEvent("Event");
             e.initEvent(event.type, event.bubbles, event.cancelable);
             for(var k in event) { try { e[k] = event[k]; } catch(meh) {} }
             iframe.parentNode[DISPATCH_EVENT](e);
           };
-          addEventListener.call(this, type, listener, options);
+          addEventListener.call(self, type, listener, options);
           addEventListener.call(html, type, listeners.d[i], options);
         }
       };
       Element[REMOVE_EVENT_LISTENER] = function (type, listener, options) {
-        var listeners = this[iframe.id];
+        var listeners = this[id];
         var i = listeners ? listeners.s.indexOf(listener) : -1;
         if (i > -1) {
           removeEventListener.call(this, type, listener, options);
@@ -202,9 +203,9 @@
       };
       // all listeners registered while the iframe state was incomplete
       // should now be attached with the right method to those nodes
-      for (var tmp, i = 0; i < iframe.listeners.length; i++) {
-        tmp = iframe.listeners[i];
-        Element[tmp.k].apply(tmp.t, tmp.a);
+      for (var tmp, i = 0; i < listeners.length; i++) {
+        tmp = listeners[i];
+        Element[tmp[0]].apply(tmp[1], tmp[2]);
       }
     };
 
@@ -213,13 +214,13 @@
       iframe.onload = onload;
       // also intercept every addEventListener happened before
       Element[ADD_EVENT_LISTENER] = function () {
-        iframe.listeners.push({k: ADD_EVENT_LISTENER, t: this, a: arguments});
+        listeners.push([ADD_EVENT_LISTENER, this, arguments]);
       };
       Element[REMOVE_EVENT_LISTENER] = function () {
-        iframe.listeners.push({k: REMOVE_EVENT_LISTENER, t: this, a: arguments});
+        listeners.push([REMOVE_EVENT_LISTENER, this, arguments]);
       };
       Element[DISPATCH_EVENT] = function () {
-        iframe.listeners.push({k: DISPATCH_EVENT, t: this, a: arguments});
+        listeners.push([DISPATCH_EVENT, this, arguments]);
       };
     }
     // otherwise set it up right away
@@ -234,7 +235,7 @@
         document.createElement('style')
       ).textContent = 'html,body{' + cssReset + '}*{margin:0}' + shadowReset;
       // JavaScript Shadow DOM fake environment bootstrap
-      iframe.setup();
+      iframeSetup();
       // the previously returned node most likely is full of content
       var firstChild;
       // which in case is different from the document one
@@ -250,7 +251,7 @@
         {width: 0, height: 0},
         iframe.style,
         body,
-        styleChecks.bind(body[GET_ELEMENTS_BY_TAG_NAME]('style'))
+        styleChecks.bind(body.getElementsByTagName('style'))
       );
       // the MutationObserver or its fallback is in charge of this
       new Observer(callback).observe(body, {
