@@ -8,7 +8,7 @@ An iframe based Shadow DOM poorlyfill
 
 ### Features
 
-  * compatible down to **IE9** with a size of about 1.3K
+  * compatible down to **IE9** with a size of about 1.4K
   * provides an `element.attachShadow(mode)` method out of the box
   * both mode `open` and `closed` are available. `open` is set to the `shadowRoot` property as expected
   * events are synthetically re-targeted to the owner, hence propagated to the parent document
@@ -18,11 +18,12 @@ An iframe based Shadow DOM poorlyfill
 ### Missing
 
   * the `<slot>` element <small>(under consideration)</small>
+  * if you `shadowRoot.innerHTML = "<p onclick='console.log(0)'></p>"` DOM Level 0 events won't ever propagate (inconsistent with real Shadow DOM, just don't do that or simply use [hyperHTML](https://github.com/WebReflection/hyperHTML) instead that will use `addEventListener`)
 
 ### What this is not
 
   * this is not a Custom Elements or an HTMLTemplateElement polyfill. This is only the `attachShadow` method.
-  * this is not, and never will be, a 100% reliable polyfill for Shadow DOM, for the simple reason that Shadow DOM cannot be polyfilled (this is _a poorlyfill_ indeed)
+  * this is not, and never could be, a 100% reliable polyfill for Shadow DOM, for the simple reason that Shadow DOM cannot be polyfilled (this is _a poorlyfill_ indeed, with its caveats and compromises)
   * not yet a battle tested solution. If you have any experience with _iframe_ shenanigans please help making this poorlyfill less poor, thank you!
 
 ### CDN
