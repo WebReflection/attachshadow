@@ -2,6 +2,11 @@
   /*! (c) Andrea Giammarchi - @WebReflection (ISC) */
   if (attachShadow in element) return;
 
+  // minifier friendly common constants
+  var ADD_EVENT_LISTENER = 'addEventListener';
+  var REMOVE_EVENT_LISTENER = 'removeEventListener';
+  var DISPATCH_EVENT = 'dispatchEvent';
+
   // used to reset both iframe and its document
   var cssReset = [
     'display:inline-block',
@@ -102,10 +107,10 @@
       resize();
     }
     // simulates the MutationObserver API
-    // disconnet() { body.removeEventListener('DOMSubtreeModified', onDOMSM); }
+    // disconnet() { body[REMOVE_EVENT_LISTENER]('DOMSubtreeModified', onDOMSM); }
     // ain't needed
     this.observe = function (body) {
-      body.addEventListener('DOMSubtreeModified', onDOMSM);
+      body[ADD_EVENT_LISTENER]('DOMSubtreeModified', onDOMSM);
     };
   }
 
@@ -118,15 +123,13 @@
     // in some browser there's no synchronous body when you create an iframe
     var body = document.body || document.createElement('body');
     var fragment = document.createDocumentFragment();
+  
     // the returned body might be the right one or not
     // same goes for its document, it might be replaced
     // once the iframe.onload is triggered (if ever)
     // these functions pass through scoped vars to accessors
     // ensuring the right target is always reached.
-    // the fragment is just for convenience
     var viaBody = function () { return body; };
-    var viaDocument = function () { return document; };
-    var viaFragment = function () { return fragment; };
 
     // attach all delegates to the shadowRoot element
     for (var key in fragment) {
@@ -137,10 +140,16 @@
           case 'nodeName':
           case 'nodeType':
           case 'tagName':
-            descriptors[key] = indirectAccessor(viaFragment, key);
+            descriptors[key] = indirectAccessor(
+              function () { return fragment; },
+              key
+            );
             break;
           case 'activeElement':
-            descriptors[key] = indirectAccessor(viaDocument, key);
+            descriptors[key] = indirectAccessor(
+              function () { return document; },
+              key
+            );
             break;
           default:
             descriptors[key] = indirectAccessor(viaBody, key);
@@ -157,17 +166,61 @@
     Object.defineProperties(this, descriptors);
 
     // attach to the iframe some information used on onload
-    iframe.id = uid();
-    iframe.listeners = [];
-    iframe.Element = (window.Element||window.Node).prototype;
-    iframe.addEventListener = iframe.Element.addEventListener;
+    var id = uid();
+    var listeners = [];
+    var Element = (window.Element||window.Node).prototype;
+    var addEventListener = Element[ADD_EVENT_LISTENER];
+    var removeEventListener = Element[REMOVE_EVENT_LISTENER];
+    function iframeSetup() {
+      var html = document.documentElement;
+      Element.attachShadow = element.attachShadow;
+      Element[ADD_EVENT_LISTENER] = function (type, listener, options) {
+        var self = this;
+        var listeners = self[id] || (self[id] = {s: [], d: []});
+        var i = listeners.s.indexOf(listener);
+        if (i < 0) {
+          i = listeners.s.push(listener) - 1;
+          listeners.d[i] = function (event) {
+            if (!self.contains(event.target)) return;
+            var e = iframe.ownerDocument.createEvent("Event");
+            e.initEvent(event.type, event.bubbles, event.cancelable);
+            for(var k in event) { try { e[k] = event[k]; } catch(meh) {} }
+            iframe.parentNode[DISPATCH_EVENT](e);
+          };
+          addEventListener.call(self, type, listener, options);
+          addEventListener.call(html, type, listeners.d[i], options);
+        }
+      };
+      Element[REMOVE_EVENT_LISTENER] = function (type, listener, options) {
+        var listeners = this[id];
+        var i = listeners ? listeners.s.indexOf(listener) : -1;
+        if (i > -1) {
+          removeEventListener.call(this, type, listener, options);
+          removeEventListener.call(html, type, listeners.d[i], options);
+          listeners.s.splice(i, 1);
+          listeners.d.splice(i, 1);
+        }
+      };
+      // all listeners registered while the iframe state was incomplete
+      // should now be attached with the right method to those nodes
+      for (var tmp, i = 0; i < listeners.length; i++) {
+        tmp = listeners[i];
+        Element[tmp[0]].apply(tmp[1], tmp[2]);
+      }
+    };
 
     // if the document is not ready, set it up onload
     if (document.readyState != "complete") {
       iframe.onload = onload;
       // also intercept every addEventListener happened before
-      iframe.Element.addEventListener = function () {
-        iframe.listeners.push({t: this, a: arguments});
+      Element[ADD_EVENT_LISTENER] = function () {
+        listeners.push([ADD_EVENT_LISTENER, this, arguments]);
+      };
+      Element[REMOVE_EVENT_LISTENER] = function () {
+        listeners.push([REMOVE_EVENT_LISTENER, this, arguments]);
+      };
+      Element[DISPATCH_EVENT] = function () {
+        listeners.push([DISPATCH_EVENT, this, arguments]);
       };
     }
     // otherwise set it up right away
@@ -182,45 +235,7 @@
         document.createElement('style')
       ).textContent = 'html,body{' + cssReset + '}*{margin:0}' + shadowReset;
       // JavaScript Shadow DOM fake environment bootstrap
-      head.appendChild(document.createElement('script')).textContent = [
-        '(function(G,A,html){',
-          // IE9 needs this because parent[iframe.id]
-          // would give back the iframe window instead
-          'for(var F,i=0,l=A.length;i<l;i++){',
-            'if(A[i].id==="' + iframe.id + '"){F=A[i];break;}',
-          '}',
-          'F.Element.' + attachShadow + '=',
-            '(parent.Element||parent.Node).prototype.' + attachShadow + ';',
-          'var removeEventListener=F.Element.removeEventListener;',
-          // the idea is that any event that reaches HTML
-          // is meant to be propagated up to the parent document
-          'F.Element.addEventListener=function(t){',
-            'var self=this;',
-            'F.addEventListener.apply(self,arguments);',
-            'F.addEventListener.call(html,t,function(e){',
-              'var c=F.ownerDocument.createEvent("Event");',
-              'c.initEvent(e.type,e.bubbles,e.cancelable);',
-              'for(var k in e)c[k]=e[k];',
-              'F.parentNode.dispatchEvent(c);',
-            '});',
-          '};',
-          // and dropping inner events should stop
-          // propagating them up to the parent document ... right?
-          'F.Element.removeEventListener=function(){',
-            'removeEventListener.apply(this,arguments);',
-          '};',
-          // all listeners registered while the iframe state was incomplete
-          // should now be attached with the right method to those nodes
-          'for(var l,i=0;i<F.listeners.length;i++){',
-            'l=F.listeners[i];',
-            'F.Element.addEventListener.apply(l.t,l.a);',
-          '}',
-        '}(',
-          'window,',
-          'parent.document.getElementsByTagName("iframe"),',
-          'document.documentElement',
-        '))'
-      ].join('\n');
+      iframeSetup();
       // the previously returned node most likely is full of content
       var firstChild;
       // which in case is different from the document one
