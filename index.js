@@ -124,15 +124,13 @@
     // in some browser there's no synchronous body when you create an iframe
     var body = document.body || document.createElement('body');
     var fragment = document.createDocumentFragment();
+  
     // the returned body might be the right one or not
     // same goes for its document, it might be replaced
     // once the iframe.onload is triggered (if ever)
     // these functions pass through scoped vars to accessors
     // ensuring the right target is always reached.
-    // the fragment is just for convenience
     var viaBody = function () { return body; };
-    var viaDocument = function () { return document; };
-    var viaFragment = function () { return fragment; };
 
     // attach all delegates to the shadowRoot element
     for (var key in fragment) {
@@ -143,10 +141,16 @@
           case 'nodeName':
           case 'nodeType':
           case 'tagName':
-            descriptors[key] = indirectAccessor(viaFragment, key);
+            descriptors[key] = indirectAccessor(
+              function () { return fragment; },
+              key
+            );
             break;
           case 'activeElement':
-            descriptors[key] = indirectAccessor(viaDocument, key);
+            descriptors[key] = indirectAccessor(
+              function () { return document; },
+              key
+            );
             break;
           default:
             descriptors[key] = indirectAccessor(viaBody, key);
@@ -230,14 +234,7 @@
         document.createElement('style')
       ).textContent = 'html,body{' + cssReset + '}*{margin:0}' + shadowReset;
       // JavaScript Shadow DOM fake environment bootstrap
-      head.appendChild(document.createElement('script')).textContent = [
-        '(function(A,G){',
-          // IE9 needs this because parent[iframe.id]
-          // would give back the iframe window instead
-          'for(var F,i=0,l=A.length;i<l;i++){',
-            'if(A[i].id==="' + iframe.id + '")return A[i].setup(G)}',
-        '}(parent.document.' + GET_ELEMENTS_BY_TAG_NAME + '("iframe")))'
-      ].join('\n');
+      iframe.setup();
       // the previously returned node most likely is full of content
       var firstChild;
       // which in case is different from the document one

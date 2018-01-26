@@ -8,7 +8,7 @@ An iframe based Shadow DOM poorlyfill
 
 ### Features
 
-  * compatible down to **IE9** with a size of about 1.4K
+  * compatible down to **IE9** with a size of about 1.3K
   * provides an `element.attachShadow(mode)` method out of the box
   * both mode `open` and `closed` are available. `open` is set to the `shadowRoot` property as expected
   * events are synthetically re-targeted to the owner, hence propagated to the parent document
