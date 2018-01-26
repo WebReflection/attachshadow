@@ -15,6 +15,10 @@ An iframe based Shadow DOM poorlyfill
   * encapsulation is preserved, including `:host` CSS declarations
   * each _iframe_ transparently resizes accordingly to its content
 
+### Missing
+
+  * the `<slot>` element <small>(under consideration)</small>
+
 ### What this is not
 
   * this is not a Custom Elements or an HTMLTemplateElement polyfill. This is only the `attachShadow` method.
