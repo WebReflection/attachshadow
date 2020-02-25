@@ -25,6 +25,8 @@
   // ensure unique id
   var counter = 0;
 
+  var defineProperties = Object.defineProperties;
+
   // add the shadowReset rules to the current document
   headOf(document).insertBefore(
     document.createElement('style'),
@@ -46,7 +48,8 @@
     // create a shadowRoot via the appended iframe
     var shadowRoot = new ShadowContent(this.appendChild(iframe), options);
     // and attach it if mode is open
-    if (options.mode === 'open') this.shadowRoot = shadowRoot;
+    if (options.mode === 'open')
+      defineProperties(this, {shadowRoot: {value: shadowRoot}});
     return shadowRoot;
   };
 
@@ -163,7 +166,7 @@
     descriptors.textContent = indirectAccessor(viaBody, 'textContent');
 
     // attaching all delegates to the returned instance
-    Object.defineProperties(this, descriptors);
+    defineProperties(this, descriptors);
 
     // attach to the iframe some information used on onload
     var id = uid();
